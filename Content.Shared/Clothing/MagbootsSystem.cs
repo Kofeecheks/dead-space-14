@@ -3,6 +3,8 @@ using Content.Shared.Alert;
 using Content.Shared.Atmos.Components;
 using Content.Shared.Clothing.EntitySystems;
 using Content.Shared.Gravity;
+using Content.Shared.Hands;
+using Content.Shared.Hands.EntitySystems;
 using Content.Shared.Inventory;
 using Content.Shared.Item;
 using Content.Shared.Item.ItemToggle;
@@ -14,6 +16,8 @@ namespace Content.Shared.Clothing;
 public sealed class SharedMagbootsSystem : EntitySystem
 {
     [Dependency] private readonly AlertsSystem _alerts = default!;
+    [Dependency] private readonly SharedHandsSystem _hands = default!;
+    [Dependency] private readonly InventorySystem _inventory = default!;
     [Dependency] private readonly ItemToggleSystem _toggle = default!;
     [Dependency] private readonly SharedContainerSystem _container = default!;
     [Dependency] private readonly SharedGravitySystem _gravity = default!;
@@ -25,14 +29,16 @@ public sealed class SharedMagbootsSystem : EntitySystem
         SubscribeLocalEvent<MagbootsComponent, ItemToggledEvent>(OnToggled);
         SubscribeLocalEvent<MagbootsComponent, ClothingGotEquippedEvent>(OnGotEquipped);
         SubscribeLocalEvent<MagbootsComponent, ClothingGotUnequippedEvent>(OnGotUnequipped);
+        SubscribeLocalEvent<MagbootsComponent, GotEquippedHandEvent>(OnGotEquippedHand);
+        SubscribeLocalEvent<MagbootsComponent, GotUnequippedHandEvent>(OnGotUnequippedHand);
         SubscribeLocalEvent<MagbootsComponent, IsWeightlessEvent>(OnIsWeightless);
         SubscribeLocalEvent<MagbootsComponent, InventoryRelayedEvent<IsWeightlessEvent>>(OnIsWeightless);
     }
 
     private void OnToggled(Entity<MagbootsComponent> ent, ref ItemToggledEvent args)
     {
-        if (_container.TryGetContainingContainer((ent.Owner, null, null), out var container))
-            UpdateMagbootEffects(container.Owner, ent, args.Activated);
+        if (TryGetHolder(ent.Owner, out var holder))
+            UpdateMagbootEffects(holder, ent, args.Activated);
     }
 
     private void OnGotUnequipped(Entity<MagbootsComponent> ent, ref ClothingGotUnequippedEvent args)
@@ -43,6 +49,16 @@ public sealed class SharedMagbootsSystem : EntitySystem
     private void OnGotEquipped(Entity<MagbootsComponent> ent, ref ClothingGotEquippedEvent args)
     {
         UpdateMagbootEffects(args.Wearer, ent, _toggle.IsActivated(ent.Owner));
+    }
+
+    private void OnGotEquippedHand(Entity<MagbootsComponent> ent, ref GotEquippedHandEvent args)
+    {
+        UpdateMagbootEffects(args.User, ent, _toggle.IsActivated(ent.Owner));
+    }
+
+    private void OnGotUnequippedHand(Entity<MagbootsComponent> ent, ref GotUnequippedHandEvent args)
+    {
+        UpdateMagbootEffects(args.User, ent, false);
     }
 
     public void UpdateMagbootEffects(EntityUid user, Entity<MagbootsComponent> ent, bool state)
@@ -57,6 +73,29 @@ public sealed class SharedMagbootsSystem : EntitySystem
             _alerts.ShowAlert(user, ent.Comp.MagbootsAlert);
         else
             _alerts.ClearAlert(user, ent.Comp.MagbootsAlert);
+    }
+
+    private bool TryGetHolder(EntityUid uid, out EntityUid holder)
+    {
+        holder = default;
+
+        if (!_inventory.InSlotWithFlags(uid, SlotFlags.FEET))
+        {
+            if (!_container.TryGetContainingContainer((uid, null, null), out var handContainer) ||
+                !_hands.IsHolding(handContainer.Owner, uid))
+            {
+                return false;
+            }
+
+            holder = handContainer.Owner;
+            return true;
+        }
+
+        if (!_container.TryGetContainingContainer((uid, null, null), out var container))
+            return false;
+
+        holder = container.Owner;
+        return true;
     }
 
     private void OnIsWeightless(Entity<MagbootsComponent> ent, ref IsWeightlessEvent args)
