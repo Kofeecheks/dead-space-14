@@ -5,6 +5,7 @@ using Content.Shared.Foldable;
 using Content.Shared.Interaction;
 using Content.Shared.Popups;
 using Content.Shared.Stacks;
+using Content.Shared.Tag;
 using Content.Shared.Verbs;
 using Content.Shared.Whitelist;
 using Robust.Shared.Audio;
@@ -22,6 +23,8 @@ namespace Content.Shared.Salvage.Fulton;
 /// </summary>
 public abstract partial class SharedFultonSystem : EntitySystem
 {
+    private static readonly ProtoId<TagPrototype> FultonAnchorableTag = "FultonAnchorable";
+
     [Dependency] protected readonly IGameTiming Timing = default!;
     [Dependency] private   readonly MetaDataSystem _metadata = default!;
     [Dependency] protected readonly SharedAudioSystem Audio = default!;
@@ -30,6 +33,7 @@ public abstract partial class SharedFultonSystem : EntitySystem
     [Dependency] protected readonly SharedContainerSystem Container = default!;
     [Dependency] private   readonly SharedPopupSystem _popup = default!;
     [Dependency] private   readonly SharedStackSystem _stack = default!;
+    [Dependency] private   readonly TagSystem _tag = default!;
     [Dependency] protected readonly SharedTransformSystem TransformSystem = default!;
     [Dependency] private readonly EntityWhitelistSystem _whitelistSystem = default!;
 
@@ -187,7 +191,7 @@ public abstract partial class SharedFultonSystem : EntitySystem
     {
         var xform = Transform(uid);
 
-        if (xform.Anchored)
+        if (xform.Anchored && !_tag.HasTag(uid, FultonAnchorableTag))
             return false;
 
         // Shouldn't need recursive container checks I think.

@@ -590,6 +590,9 @@
   id: Folder # Storage whitelist: Bookshelf, NoticeBoard, MailCart
 
 - type: Tag
+  id: FultonAnchorable # Allows SharedFultonSystem to target anchored entities that should still be recoverable by fulton.
+
+- type: Tag
   id: FoodSnack # Storage whitelist: CandyBucket, CandyBowl. ItemMapper: CandyBowl
 
 - type: Tag

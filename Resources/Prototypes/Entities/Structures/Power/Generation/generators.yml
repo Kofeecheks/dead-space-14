@@ -291,6 +291,9 @@
   description: A Radioisotope Thermoelectric Generator for long term power. This one has damaged shielding.
   suffix: 1kW # DS14-uranium-rework
   components:
+  - type: Tag
+    tags:
+    - FultonAnchorable
   - type: PowerSupplier
     supplyRate: 1000 # DS14-uranium-rework
   - type: Sprite
